@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Subasta - Moderador</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="style.css" rel="stylesheet"/>
+</head>
+<body>
+  <div class="overlay"></div>
+  <div class="main-wrapper container d-flex flex-column justify-content-center align-items-center text-center">
+    <div class="card pin-card">
+      <div class="card-body">
+        <h2 class="mb-4">Crear Sala de Subasta</h2>
+        <form id="createRoomForm" class="d-flex flex-column align-items-center gap-3 mb-4">
+          <input type="text" class="form-control text-center" id="roomName" placeholder="Nombre de la sala" required style="max-width: 300px;">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="fas fa-plus me-2"></i>Crear Sala
+          </button>
+        </form>
+
+        <div id="pinCard" style="display: none;">
+          <h4 class="text-muted mb-2">PIN de la sala</h4>
+          <h1 class="display-3 fw-bold text-dark" id="roomPin">----</h1>
+          <p class="text-muted">Comparte este PIN con los participantes</p>
+        </div>
+
+        <hr class="my-4" />
+
+        <div id="productosLista" class="mt-4" style="display: none;">
+          <h4 class="mb-3">Agregar Prenda</h4>
+          <form id="addProductForm" class="d-flex flex-column align-items-center gap-3">
+            <input type="text" class="form-control text-center" id="productName" placeholder="Nombre de la prenda" required style="max-width: 300px;">
+            <input type="number" class="form-control text-center" id="startingPrice" placeholder="Precio inicial" required style="max-width: 300px;">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="fas fa-tshirt me-2"></i>Agregar Prenda
+            </button>
+          </form>
+
+          <div class="mt-4">
+            <h4>Prendas en Subasta</h4>
+            <div class="list-group" id="listaProductos">
+              <!-- Los productos se agregarán aquí dinámicamente -->
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-danger mt-4" style="display: none;" id="mensajeError"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/moderador.js"></script>
+</body>
+</html>
