@@ -12,7 +12,21 @@ const app = express();
 const server = http.createServer(app);
 
 // Configuración de seguridad básica
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "fonts.googleapis.com"],
+            fontSrc: ["'self'", "fonts.gstatic.com", "cdnjs.cloudflare.com"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            connectSrc: ["'self'", "ws:", "wss:"]
+        }
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false
+}));
+
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' ? process.env.ALLOWED_ORIGIN : '*'
 }));
@@ -111,6 +125,11 @@ io.on('connection', (socket) => {
     socket.on('verificar_sala', ({ pin }) => {
         console.log('Verificando sala:', pin);
         const sala = salas.get(pin);
+        console.log('Resultado de verificación:', { 
+            existe: !!sala,
+            pin: sala ? pin : null,
+            nombre: sala ? sala.nombre : null
+        });
         socket.emit('sala_verificada', { 
             existe: !!sala,
             pin: sala ? pin : null
@@ -186,13 +205,33 @@ io.on('connection', (socket) => {
         const sala = salas.get(pin);
         
         if (!sala) {
+            console.error('Sala no encontrada:', pin);
             socket.emit('error', 'La sala no existe');
             return;
         }
 
+        // Verificar si el participante ya está en la sala
         if (sala.participantes.has(nombre)) {
-            socket.emit('error', 'Este nombre ya está en uso');
-            return;
+            const participante = sala.participantes.get(nombre);
+            if (participante.socketId === socket.id) {
+                // Es la misma conexión, solo actualizar datos
+                socket.data.pin = pin;
+                socket.data.nombre = nombre;
+                socket.join(pin);
+                
+                // Enviar estado actual
+                const estadoInicial = {
+                    pin: pin,
+                    productos: Array.from(sala.productos.values()),
+                    participante: nombre
+                };
+                socket.emit('estado_inicial', estadoInicial);
+                return;
+            } else {
+                console.error('Nombre ya en uso:', nombre);
+                socket.emit('error', 'Este nombre ya está en uso');
+                return;
+            }
         }
 
         // Unir al participante a la sala
@@ -204,7 +243,7 @@ io.on('connection', (socket) => {
             nombre: nombre
         });
 
-        console.log('Participante unido:', { pin, nombre });
+        console.log('Participante unido exitosamente:', { pin, nombre });
 
         // Enviar estado inicial
         const estadoInicial = {
@@ -263,6 +302,7 @@ io.on('connection', (socket) => {
     // Iniciar subasta de un producto
     socket.on('iniciar_subasta', ({ pin, productoId }) => {
         try {
+            console.log('Intentando iniciar subasta:', { pin, productoId });
             const sala = salas.get(pin);
             if (!sala || socket.id !== sala.moderador) {
                 throw new Error('No autorizado');
@@ -277,6 +317,13 @@ io.on('connection', (socket) => {
             for (const p of sala.productos.values()) {
                 if (p.estado === 'activo') {
                     p.estado = 'finalizado';
+                    io.to(pin).emit('estado_subasta_cambiado', {
+                        id: p.id,
+                        estado: 'finalizado',
+                        producto: p.nombre,
+                        oferta: p.ofertaActual,
+                        lider: p.lider
+                    });
                 }
             }
 
