@@ -4,28 +4,13 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
-const helmet = require('helmet');
+
 const cors = require('cors');
 const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
 
-// Configuración de seguridad básica
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
-            styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "fonts.googleapis.com"],
-            fontSrc: ["'self'", "fonts.gstatic.com", "cdnjs.cloudflare.com"],
-            imgSrc: ["'self'", "data:", "blob:"],
-            connectSrc: ["'self'", "ws:", "wss:"]
-        }
-    },
-    crossOriginEmbedderPolicy: false,
-    crossOriginResourcePolicy: false
-}));
 
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' ? process.env.ALLOWED_ORIGIN : '*'
@@ -304,7 +289,12 @@ io.on('connection', (socket) => {
         try {
             console.log('Intentando iniciar subasta:', { pin, productoId });
             const sala = salas.get(pin);
-            if (!sala || socket.id !== sala.moderador) {
+            if (!sala) {
+                throw new Error('Sala no encontrada');
+            }
+
+            // Verificar si el socket es el moderador de esta sala
+            if (socket.data.pin !== pin || !socket.data.esModerador) {
                 throw new Error('No autorizado');
             }
 
@@ -347,7 +337,12 @@ io.on('connection', (socket) => {
     socket.on('finalizar_subasta', ({ pin, productoId }) => {
         try {
             const sala = salas.get(pin);
-            if (!sala || socket.id !== sala.moderador) {
+            if (!sala) {
+                throw new Error('Sala no encontrada');
+            }
+
+            // Verificar si el socket es el moderador de esta sala
+            if (socket.data.pin !== pin || !socket.data.esModerador) {
                 throw new Error('No autorizado');
             }
 

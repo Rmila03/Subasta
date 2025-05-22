@@ -2,7 +2,6 @@ const socket = io();
 const pinSection = document.getElementById('pinSection');
 const nameSection = document.getElementById('nameSection');
 const auctionSection = document.getElementById('auctionSection');
-const pinForm = document.getElementById('pinForm');
 const nameForm = document.getElementById('nameForm');
 const salaPin = document.getElementById('salaPin');
 const productoNombre = document.getElementById('productoNombre');
@@ -52,19 +51,6 @@ function agregarOfertaAlHistorial(oferta) {
     historialOfertas.insertBefore(item, historialOfertas.firstChild);
 }
 
-pinForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const pin = document.getElementById('roomPin').value;
-    
-    if (!pin) {
-        mostrarError("Por favor ingresa el PIN de la sala");
-        return;
-    }
-
-    // Verificar si la sala existe
-    socket.emit('verificar_sala', { pin });
-});
-
 // Inicializar event listeners solo si los elementos existen
 if (nameForm) {
     nameForm.addEventListener('submit', (e) => {
@@ -103,8 +89,8 @@ if (bidForm) {
 socket.on('sala_verificada', (datos) => {
     console.log('Respuesta de verificación de sala:', datos);
     if (datos.existe) {
-        pinSection.style.display = 'none';
-        nameSection.style.display = 'block';
+        if (pinSection) pinSection.style.display = 'none';
+        if (nameSection) nameSection.style.display = 'block';
     } else {
         mostrarError("El PIN ingresado no corresponde a ninguna sala activa");
         setTimeout(() => {
@@ -116,20 +102,22 @@ socket.on('sala_verificada', (datos) => {
 socket.on('estado_inicial', (estado) => {
     console.log('Estado inicial recibido:', estado);
     
+    // Si ya hay un participante, mostrar la sección de subasta
+    if (estado.participante) {
+        if (nameSection) nameSection.style.display = 'none';
+        if (auctionSection) auctionSection.style.display = 'block';
+    }
+    
     if (estado.productos && estado.productos.length > 0) {
         const productoActivo = estado.productos.find(p => p.estado === 'activo');
         if (productoActivo) {
             productoNombre.textContent = productoActivo.nombre;
-            ofertaActual.textContent = `$${productoActivo.ofertaActual}`;
+            ofertaActual.textContent = `$${productoActivo.ofertaActual || productoActivo.precioInicial}`;
             liderActual.textContent = productoActivo.lider || 'Sin ofertas';
-            nameSection.style.display = 'none';
-            auctionSection.style.display = 'block';
-            
-            // Limpiar y mostrar historial de ofertas
-            historialOfertas.innerHTML = '';
-            if (productoActivo.historialOfertas) {
-                productoActivo.historialOfertas.forEach(oferta => agregarOfertaAlHistorial(oferta));
-            }
+        } else {
+            productoNombre.textContent = 'Esperando inicio de la subasta';
+            ofertaActual.textContent = '$0';
+            liderActual.textContent = '-';
         }
     }
 });
@@ -139,12 +127,6 @@ socket.on('actualizar_oferta', (datos) => {
     productoNombre.textContent = datos.producto;
     ofertaActual.textContent = `$${datos.oferta}`;
     liderActual.textContent = datos.lider || 'Sin ofertas';
-    if (datos.oferta) {
-        agregarOfertaAlHistorial({
-            participante: datos.lider,
-            monto: datos.oferta
-        });
-    }
 });
 
 socket.on('error', (mensaje) => {

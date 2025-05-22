@@ -19,44 +19,74 @@ function mostrarError(msg) {
 // Función para mostrar un producto en la lista
 function mostrarProducto(producto) {
   const item = document.createElement('div');
-  item.className = 'list-group-item';
+  item.className = 'producto-item';
   item.innerHTML = `
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="d-flex justify-content-between align-items-start">
       <div>
-        <h6 class="mb-1">${producto.nombre}</h6>
-        <small class="text-muted">Precio inicial: $${producto.precioInicial}</small>
-        ${producto.estado === 'activo' ? '<span class="badge bg-success ms-2">En subasta</span>' : ''}
+        <h5 class="mb-1">${producto.nombre}</h5>
+        <div class="mb-2">
+          <span class="badge ${producto.estado === 'activo' ? 'bg-success' : producto.estado === 'finalizado' ? 'bg-danger' : 'bg-secondary'}">
+            ${producto.estado === 'activo' ? 'En subasta' : producto.estado === 'finalizado' ? 'Finalizado' : 'Pendiente'}
+          </span>
+        </div>
+        <div class="text-muted">
+          <small>Precio inicial: $${producto.precioInicial}</small>
+          ${producto.estado !== 'pendiente' ? `
+            <br>
+            <small>Oferta actual: $${producto.ofertaActual}</small>
+            ${producto.lider ? `<br><small>Líder: ${producto.lider}</small>` : ''}
+          ` : ''}
+        </div>
       </div>
       <div>
         ${producto.estado !== 'activo' ? 
-          `<button class="btn btn-sm btn-success" onclick="iniciarSubasta('${producto.id}')">
+          `<button class="btn btn-sm btn-success iniciar-subasta" data-producto-id="${producto.id}">
             <i class="fas fa-play"></i> Iniciar
           </button>` : 
-          `<button class="btn btn-sm btn-danger" onclick="finalizarSubasta('${producto.id}')">
+          `<button class="btn btn-sm btn-danger finalizar-subasta" data-producto-id="${producto.id}">
             <i class="fas fa-stop"></i> Finalizar
           </button>`
         }
       </div>
     </div>
+    ${producto.historialOfertas && producto.historialOfertas.length > 0 ? `
+      <div class="historial-ofertas mt-3">
+        <h6 class="text-muted mb-2">Historial de ofertas:</h6>
+        <div class="list-group list-group-flush">
+          ${producto.historialOfertas.map(oferta => `
+            <div class="oferta-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <span>${oferta.participante}</span>
+                <span class="badge bg-primary">$${oferta.monto}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
   `;
   listaProductos.appendChild(item);
 }
 
-// Función para iniciar la subasta de un producto
-window.iniciarSubasta = function(productoId) {
-  if (currentPin) {
-    console.log('Iniciando subasta:', { pin: currentPin, productoId });
-    socket.emit('iniciar_subasta', { pin: currentPin, productoId });
-  }
-};
+// Event delegation para los botones de iniciar y finalizar
+listaProductos.addEventListener('click', (e) => {
+  const target = e.target.closest('button');
+  if (!target) return;
 
-// Función para finalizar la subasta de un producto
-window.finalizarSubasta = function(productoId) {
-  if (currentPin) {
-    console.log('Finalizando subasta:', { pin: currentPin, productoId });
-    socket.emit('finalizar_subasta', { pin: currentPin, productoId });
+  if (target.classList.contains('iniciar-subasta')) {
+    const productoId = target.dataset.productoId;
+    if (currentPin) {
+      console.log('Iniciando subasta:', { pin: currentPin, productoId });
+      socket.emit('iniciar_subasta', { pin: currentPin, productoId });
+    }
+  } else if (target.classList.contains('finalizar-subasta')) {
+    const productoId = target.dataset.productoId;
+    if (currentPin) {
+      console.log('Finalizando subasta:', { pin: currentPin, productoId });
+      socket.emit('finalizar_subasta', { pin: currentPin, productoId });
+    }
   }
-};
+});
 
 createRoomForm.addEventListener('submit', (e) => {
   e.preventDefault();
