@@ -87,6 +87,11 @@ app.get('/moderador', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/moderador.html'));
 });
 
+app.get('/proyeccion', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/proyeccion.html'));
+});
+
+
 // Verificar si una sala existe
 app.post('/api/verificar-sala', (req, res) => {
   const { pin } = req.body;
@@ -271,7 +276,7 @@ io.on('connection', (socket) => {
                 lider: nombre,
                 historial: productoActivo.historialOfertas // <- Esto ya se emite
             });
-            
+
         } catch (error) {
             socket.emit('error_oferta', error.message);
         }

@@ -3,6 +3,7 @@ const createRoomForm = document.getElementById('createRoomForm');
 const addProductForm = document.getElementById('addProductForm');
 const roomPin = document.getElementById('roomPin');
 const pinCard = document.getElementById('pinCard');
+const proyectarBtn = document.getElementById('proyectarBtn'); // <--- Obtener referencia al nuevo botón
 const productosLista = document.getElementById('productosLista');
 const listaProductos = document.getElementById('listaProductos');
 const mensajeError = document.getElementById('mensajeError');
@@ -127,12 +128,13 @@ socket.on('sala_creada', (datos) => {
   currentPin = datos.pin;
   roomPin.textContent = datos.pin;
   pinCard.style.display = 'block';
+  if (proyectarBtn) { // <--- Mostrar el botón Proyectar
+    proyectarBtn.style.display = 'inline-block'; // o 'block' si prefieres que ocupe todo el ancho
+  }
   productosLista.style.display = 'block';
   
-  // Limpiar lista de productos
   listaProductos.innerHTML = '';
   
-  // Mostrar productos existentes si los hay
   if (datos.productos) {
     datos.productos.forEach(producto => mostrarProducto(producto));
   }
@@ -145,9 +147,10 @@ socket.on('producto_agregado', (producto) => {
 
 socket.on('estado_subasta_cambiado', (datos) => {
   console.log('Estado de subasta cambiado:', datos);
-  // Actualizar la lista de productos
   listaProductos.innerHTML = '';
   if (currentPin) {
+    // Es probable que el servidor envíe 'sala_creada' o un evento similar
+    // después de 'recuperar_sala' si la sala existe, lo que actualizará la UI.
     socket.emit('recuperar_sala');
   }
 });
@@ -159,17 +162,30 @@ socket.on('error', (mensaje) => {
 
 socket.on('actualizar_oferta', (datos) => {
   console.log('Oferta actualizada (moderador):', datos);
-
-  // Recargar la lista completa para reflejar los cambios
   if (currentPin) {
     socket.emit('recuperar_sala');
   }
 });
 
+// --- NUEVO: Event Listener para el botón Proyectar ---
+if (proyectarBtn) {
+  proyectarBtn.addEventListener('click', () => {
+    if (currentPin) {
+      // window.location.origin obtiene la base de la URL actual (ej: http://localhost:3000)
+      const proyeccionUrl = `${window.location.origin}/proyeccion?pin=${currentPin}`;
+      window.open(proyeccionUrl, '_blank'); // Abre en una nueva pestaña
+    } else {
+      mostrarError("No hay un PIN de sala activo para proyectar.");
+    }
+  });
+}
+// --- FIN DEL NUEVO Event Listener ---
 
-// Manejar reconexión
 socket.on('connect', () => {
   console.log('Conectado al servidor');
+  // Al reconectar, intentar recuperar la sala para actualizar el estado,
+  // incluyendo el PIN y la visibilidad del botón de proyectar si la sala ya existía.
+  socket.emit('recuperar_sala'); 
 });
 
 socket.on('disconnect', () => {
@@ -177,7 +193,5 @@ socket.on('disconnect', () => {
   mostrarError("Se ha perdido la conexión con el servidor");
 });
 
-
-
-// Recuperar sala al cargar la página
+// Recuperar sala al cargar la página inicialmente
 socket.emit('recuperar_sala'); 
