@@ -245,18 +245,13 @@ io.on('connection', (socket) => {
             const pin = socket.data.pin;
             const nombre = socket.data.nombre;
             const sala = salas.get(pin);
-            
-            if (!sala) {
-                throw new Error('Sala no encontrada');
-            }
 
-            // Encontrar el producto activo
+            if (!sala) throw new Error('Sala no encontrada');
+
             const productoActivo = Array.from(sala.productos.values())
                 .find(p => p.estado === 'activo');
 
-            if (!productoActivo) {
-                throw new Error('No hay ninguna subasta activa');
-            }
+            if (!productoActivo) throw new Error('No hay ninguna subasta activa');
 
             if (typeof monto !== 'number' || monto <= productoActivo.ofertaActual) {
                 throw new Error('La oferta debe ser mayor a la actual');
@@ -270,19 +265,17 @@ io.on('connection', (socket) => {
                 timestamp: Date.now()
             });
 
-            console.log('Nueva oferta:', { producto: productoActivo.nombre, monto, lider: nombre });
-
             io.to(pin).emit('actualizar_oferta', {
                 producto: productoActivo.nombre,
                 oferta: monto,
                 lider: nombre,
-                historial: productoActivo.historialOfertas
+                historial: productoActivo.historialOfertas // <- Esto ya se emite
             });
         } catch (error) {
-            console.error('Error en nueva oferta:', error);
             socket.emit('error_oferta', error.message);
         }
     });
+
 
     // Iniciar subasta de un producto
     socket.on('iniciar_subasta', ({ pin, productoId }) => {

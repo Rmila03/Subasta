@@ -127,7 +127,33 @@ socket.on('actualizar_oferta', (datos) => {
     productoNombre.textContent = datos.producto;
     ofertaActual.textContent = `$${datos.oferta}`;
     liderActual.textContent = datos.lider || 'Sin ofertas';
+
+    // Actualizar historial de ofertas
+    historialOfertas.innerHTML = ''; // Limpiar historial actual
+    datos.historial.forEach(oferta => agregarOfertaAlHistorial(oferta));
 });
+
+socket.on('producto_agregado', (producto) => {
+    console.log('Nuevo producto recibido:', producto);
+
+    // Si es el primer producto y está en estado 'pendiente'
+    if (producto.estado === 'pendiente') {
+        productoNombre.textContent = `${producto.nombre} (Esperando inicio de subasta)`;
+        ofertaActual.textContent = `$${producto.precioInicial}`;
+        liderActual.textContent = '-';
+        historialOfertas.innerHTML = '';
+    }
+
+    // Si el producto llega activo (poco común, pero posible)
+    if (producto.estado === 'activo') {
+        productoNombre.textContent = producto.nombre;
+        ofertaActual.textContent = `$${producto.ofertaActual}`;
+        liderActual.textContent = producto.lider || 'Sin ofertas';
+        historialOfertas.innerHTML = '';
+        producto.historialOfertas.forEach(oferta => agregarOfertaAlHistorial(oferta));
+    }
+});
+
 
 socket.on('error', (mensaje) => {
     console.error('Error recibido:', mensaje);
