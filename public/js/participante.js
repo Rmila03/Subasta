@@ -153,6 +153,68 @@ socket.on('producto_agregado', (producto) => {
         producto.historialOfertas.forEach(oferta => agregarOfertaAlHistorial(oferta));
     }
 });
+socket.on('estado_subasta_cambiado', (datos) => {
+    console.log('Cambio de estado en subasta:', datos);
+
+    const labelOferta = document.getElementById('labelOferta');
+    const labelLider = document.getElementById('labelLider');
+
+    if (datos.estado === 'activo') {
+        productoNombre.textContent = datos.producto;
+        ofertaActual.textContent = `$${datos.oferta}`;
+        liderActual.textContent = datos.lider || 'Sin ofertas';
+
+        // Restaurar etiquetas y estilos
+        labelOferta.textContent = '💵 Oferta actual:';
+        labelLider.textContent = '👑 Líder:';
+        labelOferta.style.fontSize = '';
+        labelLider.style.fontSize = '';
+        labelOferta.style.color = '';
+        labelLider.style.color = '';
+
+        if (bidForm && nuevaOferta) {
+            bidForm.querySelector('button[type="submit"]').disabled = false;
+            nuevaOferta.disabled = false;
+        }
+
+        historialOfertas.innerHTML = '';
+    }
+
+    if (datos.estado === 'finalizado') {
+    productoNombre.textContent = `${datos.producto} (Finalizado)`;
+    ofertaActual.textContent = `$${datos.oferta}`;
+
+    const labelOferta = document.getElementById('labelOferta');
+    const labelLider = document.getElementById('labelLider');
+    const liderSpan = document.getElementById('liderActual');
+
+    // Cambiar textos de las etiquetas
+    labelOferta.textContent = '💵 Oferta final:';
+    labelLider.textContent = '🏆 Ganador de la subasta:';
+
+    // Estilos destacados
+    labelOferta.style.fontSize = '1.3rem';
+    labelLider.style.fontSize = '1.4rem';
+    labelOferta.style.color = '#198754';
+    labelLider.style.color = '#ffc107'; // dorado (Bootstrap warning)
+
+    // Destacar nombre del ganador
+    if (datos.lider) {
+        liderSpan.innerHTML = `<strong style="color: #ffc107; font-size: 1.5rem; text-transform: uppercase;">👑 ${datos.lider}</strong>`;
+    } else {
+        liderSpan.textContent = 'Sin ofertas';
+    }
+
+    mostrarError(`La subasta del producto "${datos.producto}" ha finalizado. Ya no se pueden hacer pujas.`);
+
+    // Deshabilitar formulario
+    if (bidForm && nuevaOferta) {
+        bidForm.querySelector('button[type="submit"]').disabled = true;
+        nuevaOferta.disabled = true;
+    }
+}
+});
+
 
 
 socket.on('error', (mensaje) => {

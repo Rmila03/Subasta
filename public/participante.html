@@ -25,30 +25,40 @@
         </div>
 
         <div id="auctionSection" style="display: none;">
-          <h2 class="mb-4">Sala de Subasta</h2>
-          <div class="mb-4">
-            <h4 class="text-muted">PIN:</h4>
-            <h1 class="display-3 fw-bold text-dark" id="salaPin">----</h1>
+          <div class="mb-5 p-3 bg-light border rounded shadow-sm w-100">
+            <h4 class="text-muted mb-1">PIN de la sala</h4>
+            <h1 class="display-4 fw-bold text-primary" id="salaPin">----</h1>
           </div>
 
-          <div class="auction-info">
-            <h3 class="mb-3" id="productoNombre">Esperando inicio de la subasta</h3>
-            <p class="mb-1">💵 Oferta actual: <strong id="ofertaActual">$0</strong></p>
-            <p class="mb-4">👑 Líder: <span id="liderActual">-</span></p>
+            <div class="auction-info p-4 border rounded bg-white shadow w-100">
+              <h2 class="mb-4 fw-bold text-uppercase text-success" id="productoNombre">Esperando inicio de la subasta</h2>
 
-            <form id="bidForm" class="d-flex flex-column gap-3 align-items-center">
-              <input type="number" class="form-control text-center" placeholder="Tu oferta" id="nuevaOferta" required style="max-width: 200px;">
-              <button type="submit" class="btn btn-primary px-4">
-                <i class="fas fa-gavel me-2"></i>Ofertar
-              </button>
-            </form>
+              <div class="mb-4">
+                <p class="mb-2">
+                  <span id="labelOferta" class="fs-5 fw-semibold text-dark">💵 Oferta actual:</span>
+                  <strong id="ofertaActual" class="fs-4 text-primary">$0</strong>
+                </p>
+                <p class="mb-0">
+                  <span id="labelLider" class="fs-5 fw-semibold text-dark">👑 Líder:</span>
+                  <span id="liderActual" class="fs-4 text-warning fw-bold">-</span>
+                </p>
+              </div>
 
-            <div class="mt-4">
-              <h5>Historial de Ofertas</h5>
-              <div class="list-group" id="historialOfertas">
-                <!-- Las ofertas se agregarán aquí dinámicamente -->
+              <form id="bidForm" class="d-flex flex-column gap-3 align-items-center mt-3">
+                <input type="number" class="form-control text-center" placeholder="Tu oferta" id="nuevaOferta" required style="max-width: 200px;">
+                <button type="submit" class="btn btn-primary px-4">
+                  <i class="fas fa-gavel me-2"></i>Ofertar
+                </button>
+              </form>
+
+              <div class="mt-5 text-start">
+                <h5 class="mb-3">🕓 Historial de Ofertas</h5>
+                <div class="list-group" id="historialOfertas">
+                  <!-- Las ofertas se agregarán aquí dinámicamente -->
+                </div>
               </div>
             </div>
+
           </div>
         </div>
 
