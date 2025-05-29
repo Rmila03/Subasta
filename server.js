@@ -271,6 +271,7 @@ io.on('connection', (socket) => {
                 lider: nombre,
                 historial: productoActivo.historialOfertas // <- Esto ya se emite
             });
+            
         } catch (error) {
             socket.emit('error_oferta', error.message);
         }

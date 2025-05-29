@@ -157,6 +157,16 @@ socket.on('error', (mensaje) => {
   mostrarError(mensaje);
 });
 
+socket.on('actualizar_oferta', (datos) => {
+  console.log('Oferta actualizada (moderador):', datos);
+
+  // Recargar la lista completa para reflejar los cambios
+  if (currentPin) {
+    socket.emit('recuperar_sala');
+  }
+});
+
+
 // Manejar reconexión
 socket.on('connect', () => {
   console.log('Conectado al servidor');
@@ -166,6 +176,8 @@ socket.on('disconnect', () => {
   console.log('Desconectado del servidor');
   mostrarError("Se ha perdido la conexión con el servidor");
 });
+
+
 
 // Recuperar sala al cargar la página
 socket.emit('recuperar_sala'); 
