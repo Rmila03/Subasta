@@ -3,10 +3,12 @@ const createRoomForm = document.getElementById('createRoomForm');
 const addProductForm = document.getElementById('addProductForm');
 const roomPin = document.getElementById('roomPin');
 const pinCard = document.getElementById('pinCard');
-const proyectarBtn = document.getElementById('proyectarBtn'); // <--- Obtener referencia al nuevo botón
+const proyectarBtn = document.getElementById('proyectarBtn');
 const productosLista = document.getElementById('productosLista');
 const listaProductos = document.getElementById('listaProductos');
 const mensajeError = document.getElementById('mensajeError');
+const productImageInput = document.getElementById('productImage'); // Referencia al input de imagen
+
 let currentPin = null;
 
 function mostrarError(msg) {
@@ -17,13 +19,47 @@ function mostrarError(msg) {
   }, 3000);
 }
 
-// Función para mostrar un producto en la lista
+// --- NUEVA FUNCIÓN PARA REDIMENSIONAR IMAGEN ---
+function resizeImage(file, maxWidth, maxHeight, quality, callback) {
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round(height * maxWidth / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round(width * maxHeight / height);
+          height = maxHeight;
+        }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      callback(canvas.toDataURL('image/jpeg', quality)); // Convierte a Data URL (Base64)
+    };
+    img.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+// --- FIN FUNCIÓN REDIMENSIONAR ---
+
 function mostrarProducto(producto) {
   const item = document.createElement('div');
   item.className = 'producto-item';
+  // Modificado para incluir la imagen si existe
   item.innerHTML = `
     <div class="d-flex justify-content-between align-items-start">
       <div>
+        ${producto.imagenUrl ? `<img src="${producto.imagenUrl}" alt="${producto.nombre}" class="producto-imagen-miniatura mb-2">` : ''}
         <h5 class="mb-1">${producto.nombre}</h5>
         <div class="mb-2">
           <span class="badge ${producto.estado === 'activo' ? 'bg-success' : producto.estado === 'finalizado' ? 'bg-danger' : 'bg-secondary'}">
@@ -40,7 +76,7 @@ function mostrarProducto(producto) {
         </div>
       </div>
       <div>
-        ${producto.estado !== 'activo' ? 
+        ${producto.estado === 'pendiente' || producto.estado === 'finalizado' ? // Se puede iniciar si está pendiente o finalizado
           `<button class="btn btn-sm btn-success iniciar-subasta" data-producto-id="${producto.id}">
             <i class="fas fa-play"></i> Iniciar
           </button>` : 
@@ -69,7 +105,6 @@ function mostrarProducto(producto) {
   listaProductos.appendChild(item);
 }
 
-// Event delegation para los botones de iniciar y finalizar
 listaProductos.addEventListener('click', (e) => {
   const target = e.target.closest('button');
   if (!target) return;
@@ -77,13 +112,11 @@ listaProductos.addEventListener('click', (e) => {
   if (target.classList.contains('iniciar-subasta')) {
     const productoId = target.dataset.productoId;
     if (currentPin) {
-      console.log('Iniciando subasta:', { pin: currentPin, productoId });
       socket.emit('iniciar_subasta', { pin: currentPin, productoId });
     }
   } else if (target.classList.contains('finalizar-subasta')) {
     const productoId = target.dataset.productoId;
     if (currentPin) {
-      console.log('Finalizando subasta:', { pin: currentPin, productoId });
       socket.emit('finalizar_subasta', { pin: currentPin, productoId });
     }
   }
@@ -96,7 +129,6 @@ createRoomForm.addEventListener('submit', (e) => {
     mostrarError("Por favor ingresa un nombre para la sala");
     return;
   }
-  console.log('Creando sala:', name);
   socket.emit('crear_sala', name);
 });
 
@@ -108,19 +140,32 @@ addProductForm.addEventListener('submit', (e) => {
   }
   const nombre = document.getElementById('productName').value;
   const precioInicial = parseFloat(document.getElementById('startingPrice').value);
-  
+  const imagenFile = productImageInput.files[0]; // Obtener el archivo de imagen
+
   if (!nombre || isNaN(precioInicial) || precioInicial <= 0) {
     mostrarError("Por favor ingresa un nombre y precio válidos");
     return;
   }
 
-  const producto = {
+  const productoBase = {
     nombre,
     precioInicial
   };
-  console.log('Agregando producto:', producto);
-  socket.emit('agregar_producto', { pin: currentPin, producto });
-  addProductForm.reset();
+
+  if (imagenFile) {
+    // Redimensionar imagen antes de enviarla (ej. max 400x400, calidad 0.7)
+    resizeImage(imagenFile, 400, 400, 0.7, (resizedImageUrl) => {
+      const productoConImagen = { ...productoBase, imagenUrl: resizedImageUrl };
+      console.log('Agregando producto con imagen:', productoConImagen);
+      socket.emit('agregar_producto', { pin: currentPin, producto: productoConImagen });
+      addProductForm.reset(); // Limpia también el input de archivo
+    });
+  } else {
+    // Agregar producto sin imagen
+    console.log('Agregando producto sin imagen:', productoBase);
+    socket.emit('agregar_producto', { pin: currentPin, producto: productoBase });
+    addProductForm.reset();
+  }
 });
 
 socket.on('sala_creada', (datos) => {
@@ -128,13 +173,12 @@ socket.on('sala_creada', (datos) => {
   currentPin = datos.pin;
   roomPin.textContent = datos.pin;
   pinCard.style.display = 'block';
-  if (proyectarBtn) { // <--- Mostrar el botón Proyectar
-    proyectarBtn.style.display = 'inline-block'; // o 'block' si prefieres que ocupe todo el ancho
+  if (proyectarBtn) {
+    proyectarBtn.style.display = 'inline-block';
   }
   productosLista.style.display = 'block';
   
   listaProductos.innerHTML = '';
-  
   if (datos.productos) {
     datos.productos.forEach(producto => mostrarProducto(producto));
   }
@@ -142,16 +186,20 @@ socket.on('sala_creada', (datos) => {
 
 socket.on('producto_agregado', (producto) => {
   console.log('Producto agregado:', producto);
+  // Si la lista ya tiene muchos elementos, podría ser mejor solo añadir el nuevo
+  // en lugar de recargar todo, pero para simplicidad, recuperamos todo si el servidor lo maneja bien
+  // O, simplemente añadirlo a la lista existente:
   mostrarProducto(producto);
+  // Si prefieres recargar todo para mantener consistencia con otros eventos:
+  // if (currentPin) {
+  //   socket.emit('recuperar_sala'); 
+  // }
 });
 
 socket.on('estado_subasta_cambiado', (datos) => {
   console.log('Estado de subasta cambiado:', datos);
-  listaProductos.innerHTML = '';
   if (currentPin) {
-    // Es probable que el servidor envíe 'sala_creada' o un evento similar
-    // después de 'recuperar_sala' si la sala existe, lo que actualizará la UI.
-    socket.emit('recuperar_sala');
+    socket.emit('recuperar_sala'); // Recargar todo para actualizar estados e imágenes
   }
 });
 
@@ -163,28 +211,23 @@ socket.on('error', (mensaje) => {
 socket.on('actualizar_oferta', (datos) => {
   console.log('Oferta actualizada (moderador):', datos);
   if (currentPin) {
-    socket.emit('recuperar_sala');
+    socket.emit('recuperar_sala'); // Recargar todo para actualizar ofertas e imágenes
   }
 });
 
-// --- NUEVO: Event Listener para el botón Proyectar ---
 if (proyectarBtn) {
   proyectarBtn.addEventListener('click', () => {
     if (currentPin) {
-      // window.location.origin obtiene la base de la URL actual (ej: http://localhost:3000)
       const proyeccionUrl = `${window.location.origin}/proyeccion?pin=${currentPin}`;
-      window.open(proyeccionUrl, '_blank'); // Abre en una nueva pestaña
+      window.open(proyeccionUrl, '_blank');
     } else {
       mostrarError("No hay un PIN de sala activo para proyectar.");
     }
   });
 }
-// --- FIN DEL NUEVO Event Listener ---
 
 socket.on('connect', () => {
   console.log('Conectado al servidor');
-  // Al reconectar, intentar recuperar la sala para actualizar el estado,
-  // incluyendo el PIN y la visibilidad del botón de proyectar si la sala ya existía.
   socket.emit('recuperar_sala'); 
 });
 
@@ -193,5 +236,4 @@ socket.on('disconnect', () => {
   mostrarError("Se ha perdido la conexión con el servidor");
 });
 
-// Recuperar sala al cargar la página inicialmente
-socket.emit('recuperar_sala'); 
+socket.emit('recuperar_sala');
